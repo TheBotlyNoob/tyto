@@ -1,5 +1,3 @@
-#![feature(stmt_expr_attributes)]
-
 use std::{
     path::Path,
     process::{Command, Stdio},
@@ -82,30 +80,3 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
-const _: &[&str] = &[
-    "qemu-system-x86_64",
-    "-nodefaults",
-    "-device",
-    "virtio-rng-pci",
-    "-machine",
-    "q35",
-    "-smp",
-    "4",
-    "-m",
-    "256M",
-    "-device",
-    "isa-debug-exit,iobase=0xf4,iosize=0x04",
-    "-drive",
-    "if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE.fd",
-    "-drive",
-    "if=pflash,format=raw,readonly=off,file=/tmp/.tmpvUxKx6/ovmf_vars",
-    "-drive",
-    "format=raw,file=fat:rw:target/x86_64-unknown-uefi/release/esp",
-    "-vga",
-    "std",
-    "-drive",
-    "format=raw,file=/tmp/.tmpvUxKx6/test_disk.fat.img",
-    "-serial",
-    "stdio",
-    "-nic",
-];
