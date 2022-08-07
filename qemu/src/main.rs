@@ -7,7 +7,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Building the kernel...");
     let root = env!("CARGO_MANIFEST_DIR");
     let root = Path::new(&root).parent().unwrap();
-    Command::new(env!("CARGO"))
+    let output = Command::new(env!("CARGO"))
         .args(&[
             "build",
             #[cfg(not(debug_assertions))]
@@ -21,7 +21,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .spawn()?
-        .wait()?;
+        .wait_with_output()?;
+
+    if !output.status.success() {
+        std::process::exit(1);
+    }
 
     let target_dir = root.join("target");
 
