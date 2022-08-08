@@ -1,6 +1,6 @@
 #![no_main]
 #![no_std]
-#![feature(abi_efiapi)]
+#![feature(abi_efiapi, abi_x86_interrupt)]
 
 #[cfg(not(all(target_arch = "x86_64", target_vendor = "unknown", target_os = "uefi")))]
 compile_error!(concat!(
@@ -15,8 +15,9 @@ use embedded_graphics::{
 };
 use uefi::prelude::*;
 
-pub mod data;
 pub mod framebuffer;
+pub mod keyboard;
+pub mod late_init;
 pub mod log;
 
 #[entry]

@@ -1,6 +1,6 @@
 use core::fmt::Write;
 
-use crate::{data::late_init::LateInit, framebuffer::FrameBuffer};
+use crate::{framebuffer::FrameBuffer, late_init::LateInit};
 use embedded_graphics::{mono_font::MonoTextStyle, pixelcolor::Rgb888, prelude::*, text::Text};
 use spin::Mutex;
 use uart_16550::SerialPort;
@@ -9,7 +9,6 @@ pub static SERIAL1: Mutex<SerialPort> = Mutex::new(unsafe { SerialPort::new(0x3f
 pub static LOGGER: LateInit<Mutex<Logger>> = LateInit::new();
 
 pub struct Logger {
-    #[allow(dead_code)]
     framebuffer: FrameBuffer,
     next_char: Point,
 }
@@ -51,6 +50,6 @@ macro_rules! print {
 #[macro_export]
 macro_rules! println {
     ($($arg:tt)*) => {
-        print!("{}\n", format_args!($($arg)*));
+        $crate::print!("{}\n", format_args!($($arg)*));
     };
 }
