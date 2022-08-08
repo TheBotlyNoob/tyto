@@ -6,9 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-uefi = { version = "0.16.0", features = ["exts"] }
-uefi-services = "0.13"
-# linked_list_allocator = "0.10"
+uefi = { version = "0.16.0", default-features = false }
+linked_list_allocator = "0.10"
 log = "0.4"
 embedded-graphics = "0.7"
 profont = '0.6'

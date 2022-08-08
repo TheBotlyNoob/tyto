@@ -21,13 +21,8 @@ use uefi::prelude::*;
 
 pub mod framebuffer;
 
-// #[global_allocator]
-// static ALLOCATOR: linked_list_allocator::LockedHeap = linked_list_allocator::LockedHeap::empty();
-
 #[entry]
 fn main(_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
-    uefi_services::init(&mut system_table).unwrap();
-
     let mut fb = framebuffer::init(&mut system_table).unwrap();
     fb.clear(Rgb888::BLACK).unwrap();
 
@@ -35,7 +30,7 @@ fn main(_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
     let style = MonoTextStyle::new(&PROFONT_24_POINT, Rgb888::WHITE);
 
     // Create a text at position (20, 30) and draw it using the previously defined style
-    Text::new("Hello, OS!", Point::new(20, 30), style)
+    Text::new("Hello, OS!", Point::new(15, 30), style)
         .draw(&mut fb)
         .unwrap();
 
@@ -43,7 +38,8 @@ fn main(_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
     loop {}
 }
 
-// #[panic_handler]
-// fn panic(_info: &core::panic::PanicInfo) -> ! {
-//     loop {}
-// }
+#[panic_handler]
+fn panic(info: &core::panic::PanicInfo) -> ! {
+    log::error!("{info}");
+    loop {}
+}
