@@ -1,12 +1,39 @@
 use embedded_graphics::{pixelcolor::Rgb888, prelude::*, Pixel};
+use spin::Once;
 use uefi::{
     prelude::*,
     proto::console::gop::{GraphicsOutput, Mode, ModeInfo},
 };
 
+#[derive(Debug, Clone)]
 pub struct FrameBuffer {
     pub info: ModeInfo,
     ptr: *mut u32,
+}
+unsafe impl Sync for FrameBuffer {}
+unsafe impl Send for FrameBuffer {}
+
+impl FrameBuffer {
+    pub fn new(system_table: &mut SystemTable<Boot>) -> FrameBuffer {
+        static ONCE: Once<FrameBuffer> = Once::new();
+        ONCE.call_once(|| {
+            let gop = unsafe {
+                &mut *system_table
+                    .boot_services()
+                    .locate_protocol::<GraphicsOutput>()
+                    .expect("Graphics output protocol not found")
+                    .get()
+            };
+
+            let mode = set_mode(gop);
+
+            FrameBuffer {
+                info: *mode.info(),
+                ptr: gop.frame_buffer().as_mut_ptr() as _,
+            }
+        })
+        .clone()
+    }
 }
 
 impl DrawTarget for FrameBuffer {
@@ -47,23 +74,7 @@ impl OriginDimensions for FrameBuffer {
     }
 }
 
-pub fn init(system_table: &mut SystemTable<Boot>) -> uefi::Result<FrameBuffer> {
-    let gop = unsafe {
-        &mut *system_table
-            .boot_services()
-            .locate_protocol::<GraphicsOutput>()?
-            .get()
-    };
-
-    let mode = set_mode(gop)?;
-
-    Ok(FrameBuffer {
-        info: *mode.info(),
-        ptr: gop.frame_buffer().as_mut_ptr() as _,
-    })
-}
-
-fn set_mode(gop: &mut GraphicsOutput) -> uefi::Result<Mode> {
+fn set_mode(gop: &mut GraphicsOutput) -> Mode {
     let mut current_mode = Option::<Mode>::None;
     for mode in gop.modes() {
         let resolution = mode.info().resolution();
@@ -75,7 +86,7 @@ fn set_mode(gop: &mut GraphicsOutput) -> uefi::Result<Mode> {
 
     let mode = current_mode.expect("No valid graphics mode found");
 
-    gop.set_mode(&mode)?;
+    let _ = gop.set_mode(&mode);
 
-    Ok(mode)
+    mode
 }

@@ -10,36 +10,33 @@ compile_error!(concat!(
 ));
 
 use embedded_graphics::{
-    mono_font::MonoTextStyle,
     pixelcolor::Rgb888,
-    prelude::{DrawTarget, Point, RgbColor},
-    text::Text,
-    Drawable,
+    prelude::{DrawTarget, RgbColor},
 };
-use profont::PROFONT_24_POINT;
 use uefi::prelude::*;
 
+pub mod data;
 pub mod framebuffer;
+pub mod log;
 
 #[entry]
 fn main(_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
-    let mut fb = framebuffer::init(&mut system_table).unwrap();
+    let mut fb = framebuffer::FrameBuffer::new(&mut system_table);
     fb.clear(Rgb888::BLACK).unwrap();
+    log::Logger::init(fb.clone());
 
-    // Create a new character style
-    let style = MonoTextStyle::new(&PROFONT_24_POINT, Rgb888::WHITE);
+    println!("Hello, world!");
+    println!("after");
 
-    // Create a text at position (20, 30) and draw it using the previously defined style
-    Text::new("Hello, OS!", Point::new(15, 30), style)
-        .draw(&mut fb)
-        .unwrap();
-
-    #[allow(clippy::empty_loop)]
-    loop {}
+    loop {
+        unsafe {
+            core::arch::asm!("hlt");
+        }
+    }
 }
 
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
-    log::error!("{info}");
+    println!("{info}");
     loop {}
 }
