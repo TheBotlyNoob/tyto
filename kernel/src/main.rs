@@ -27,12 +27,10 @@ fn main(_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
     log::Logger::init(fb.clone());
 
     println!("Hello, world!");
-    println!("after");
+    println!("af\nter");
 
     loop {
-        unsafe {
-            core::arch::asm!("hlt");
-        }
+        x86_64::instructions::hlt();
     }
 }
 

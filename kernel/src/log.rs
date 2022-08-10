@@ -20,17 +20,28 @@ impl Logger {
             next_char: Point::new(15, 30),
         }));
     }
+    pub fn newline(&mut self) {
+        self.next_char = Point::new(15, self.next_char.y + 26);
+    }
 }
 impl Write for Logger {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
         SERIAL1.lock().write_str(s)?;
-        self.next_char = Text::new(
-            s,
-            self.next_char,
-            MonoTextStyle::new(&profont::PROFONT_24_POINT, Rgb888::WHITE),
-        )
-        .draw(&mut self.framebuffer)
-        .unwrap();
+
+        for char in s.chars() {
+            if char == '\n' {
+                self.newline();
+            } else {
+                self.next_char = Text::new(
+                    // SAFETY: The char comes from a string.
+                    unsafe { core::str::from_utf8(&[char as u8]).unwrap_unchecked() },
+                    self.next_char,
+                    MonoTextStyle::new(&profont::PROFONT_24_POINT, Rgb888::WHITE),
+                )
+                .draw(&mut self.framebuffer)
+                .unwrap();
+            }
+        }
 
         Ok(())
     }
@@ -39,6 +50,10 @@ impl Write for Logger {
 #[doc(hidden)]
 pub fn _print(args: core::fmt::Arguments) {
     LOGGER.lock().write_fmt(args).unwrap();
+    SERIAL1
+        .lock()
+        .write_fmt(format_args!("{}\n", LOGGER.lock().next_char))
+        .unwrap();
 }
 
 #[macro_export]
