@@ -28,6 +28,7 @@ fn main(_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
 
     println!("Hello, world!");
     println!("af\nter");
+    println!("abababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababab");
 
     loop {
         x86_64::instructions::hlt();

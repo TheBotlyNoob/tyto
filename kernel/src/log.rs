@@ -20,8 +20,11 @@ impl Logger {
             next_char: Point::new(15, 30),
         }));
     }
-    pub fn newline(&mut self) {
+    pub fn add_newline(&mut self) {
         self.next_char = Point::new(15, self.next_char.y + 26);
+    }
+    pub fn is_overflowing(&self) -> bool {
+        self.next_char.x > self.framebuffer.info.resolution().0 as i32 - 20
     }
 }
 impl Write for Logger {
@@ -30,7 +33,7 @@ impl Write for Logger {
 
         for char in s.chars() {
             if char == '\n' {
-                self.newline();
+                self.add_newline();
             } else {
                 self.next_char = Text::new(
                     // SAFETY: The char comes from a string.
@@ -40,6 +43,9 @@ impl Write for Logger {
                 )
                 .draw(&mut self.framebuffer)
                 .unwrap();
+                if self.is_overflowing() {
+                    self.add_newline();
+                }
             }
         }
 
