@@ -49,11 +49,7 @@ impl Write for Logger {
 
 #[doc(hidden)]
 pub fn _print(args: core::fmt::Arguments) {
-    LOGGER.lock().write_fmt(args).unwrap();
-    SERIAL1
-        .lock()
-        .write_fmt(format_args!("{}\n", LOGGER.lock().next_char))
-        .unwrap();
+    let _ = LOGGER.lock().write_fmt(args);
 }
 
 #[macro_export]
