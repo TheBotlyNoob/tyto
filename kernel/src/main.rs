@@ -35,9 +35,9 @@ fn main(_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
         halt();
     }
 
-    println!("Hello, world!");
-    println!("af\nter");
-    println!("abababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababab");
+    log::println!("Hello, world!");
+    log::println!("af\nter");
+    log::println!("abababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababab");
 
     halt();
 }
@@ -47,8 +47,11 @@ pub fn halt() -> ! {
         x86_64::instructions::hlt();
     }
 }
+
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
-    println!("{info}");
+    log::println!("{info}");
+    #[cfg(test)]
+    tests::exit_qemu(tests::QemuExitCode::Failed);
     halt();
 }

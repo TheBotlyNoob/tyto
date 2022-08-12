@@ -1,10 +1,9 @@
 use std::{
-    mem::MaybeUninit,
-    path::{Path, PathBuf},
+    path::Path,
     process::{Command, Stdio},
 };
 
-use cargo_metadata::{Artifact, ArtifactProfile, Message};
+use cargo_metadata::Message;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Building the kernel...");
@@ -105,7 +104,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Launching qemu...");
 
-    let qemu_args = &[
+    let mut qemu_args = vec![
         "-nodefaults",
         "-machine",
         "q35",
@@ -113,8 +112,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "4",
         "-m",
         "256M",
-        "-device",
-        "isa-debug-exit,iobase=0xf4,iosize=0x04",
         "-bios",
         concat!(env!("OUT_DIR"), "/OVMF.fd"),
         "-drive",
@@ -124,6 +121,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "-serial",
         "stdio",
     ];
+
+    if args.contains(&String::from("--test")) {
+        qemu_args.extend([
+            "-device",
+            "isa-debug-exit,iobase=0xf4,iosize=0x04",
+            "-display",
+            "none",
+        ]);
+    }
 
     println!("qemu-system-x86_64 {}", qemu_args.join(" "));
 

@@ -1,5 +1,5 @@
 #[allow(unused_imports)]
-use crate::println;
+use crate::log::println;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
@@ -18,14 +18,25 @@ pub fn exit_qemu(exit_code: QemuExitCode) {
 }
 
 #[cfg(test)]
-pub fn test_runner(tests: &[&dyn Fn()]) {
+pub fn test_runner(tests: &[&dyn Testable]) {
     println!("Running {} tests", tests.len());
     for test in tests {
-        test();
+        test.run();
     }
+    exit_qemu(QemuExitCode::Success);
 }
 
-#[macros::test]
-fn test_macros() {
-    println!("Hello, world!");
+pub trait Testable {
+    fn run(&self);
+}
+
+impl<T> Testable for T
+where
+    T: Fn(),
+{
+    fn run(&self) {
+        println!("{}...", core::any::type_name::<T>());
+        self();
+        println!("[ok]");
+    }
 }
