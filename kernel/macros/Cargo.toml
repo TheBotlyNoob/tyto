@@ -1,13 +1,13 @@
 [package]
-name = "qemu"
+name = "macros"
 version = "0.1.0"
 edition = "2021"
-default-run = "qemu"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[dependencies]
-cargo_metadata = "0.15"
+[lib]
+proc-macro = true
 
-[build-dependencies]
-ureq = "2.5"
+[dependencies]
+syn = "1.0"
+quote = "1.0"

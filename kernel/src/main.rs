@@ -1,6 +1,8 @@
 #![no_main]
 #![no_std]
-#![feature(abi_efiapi, abi_x86_interrupt)]
+#![feature(abi_efiapi, abi_x86_interrupt, custom_test_frameworks)]
+#![test_runner(crate::tests::test_runner)]
+#![reexport_test_harness_main = "test_main"]
 
 #[cfg(not(all(target_arch = "x86_64", target_vendor = "unknown", target_os = "uefi")))]
 compile_error!(concat!(
@@ -19,6 +21,7 @@ pub mod framebuffer;
 pub mod keyboard;
 pub mod late_init;
 pub mod log;
+pub mod tests;
 
 #[entry]
 fn main(_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
@@ -26,17 +29,26 @@ fn main(_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
     fb.clear(Rgb888::BLACK).unwrap();
     log::Logger::init(fb.clone());
 
+    #[cfg(test)]
+    {
+        test_main();
+        halt();
+    }
+
     println!("Hello, world!");
     println!("af\nter");
     println!("abababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababab");
 
+    halt();
+}
+
+pub fn halt() -> ! {
     loop {
         x86_64::instructions::hlt();
     }
 }
-
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
     println!("{info}");
-    loop {}
+    halt();
 }

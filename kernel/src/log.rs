@@ -32,7 +32,7 @@ impl Write for Logger {
         SERIAL1.lock().write_str(s)?;
 
         for char in s.chars() {
-            if char == '\n' {
+            if char == '\n' || self.is_overflowing() {
                 self.add_newline();
             } else {
                 self.next_char = Text::new(
@@ -43,9 +43,6 @@ impl Write for Logger {
                 )
                 .draw(&mut self.framebuffer)
                 .unwrap();
-                if self.is_overflowing() {
-                    self.add_newline();
-                }
             }
         }
 
