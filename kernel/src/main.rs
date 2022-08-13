@@ -30,6 +30,11 @@ pub fn main(_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
     let mut fb = framebuffer::FrameBuffer::new(&mut system_table);
     fb.clear(Rgb888::BLACK).unwrap();
     log::Logger::init(fb.clone());
+    keyboard::init();
+
+    loop {
+        print!("{}", keyboard::read());
+    }
 
     #[cfg(test)]
     {
@@ -37,9 +42,6 @@ pub fn main(_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
         halt();
     }
 
-    loop {
-        print!("{}", keyboard::Keyboard::next_char() as char);
-    }
     halt();
 }
 

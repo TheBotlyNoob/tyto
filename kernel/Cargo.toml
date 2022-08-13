@@ -12,5 +12,4 @@ profont = "0.6"
 spin = "0.9"
 uart_16550 = "0.2"
 x86_64 = "0.14"
-ps2 = "0.2"
-phf = { version = "0.11", default-features = false, features = ["macros"] }
+pc-keyboard = "0.5"

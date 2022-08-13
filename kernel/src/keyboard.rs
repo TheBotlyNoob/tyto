@@ -1,97 +1,83 @@
-// TODO: move to a USB controller
-use ps2::{error::ControllerError, flags::ControllerConfigFlags, Controller};
-use spin::{Lazy, Mutex};
+use crate::late_init::LateInit;
+use pc_keyboard::{layouts, DecodedKey, Error, HandleControl, KeyEvent, Keyboard, ScancodeSet1};
+use spin::Mutex;
+use x86_64::instructions::port::Port;
 
-pub static CONTROLLER: Lazy<Mutex<Controller>> = Lazy::new(|| {
-    (|| -> Result<Mutex<Controller>, ControllerError> {
-        let mut controller = unsafe { Controller::new() };
+pub static KEYBOARD: LateInit<Mutex<KeyboardLayout>> = LateInit::new();
 
-        // Step 3: Disable devices
-        controller.disable_keyboard()?;
-        controller.disable_mouse()?;
+pub enum KeyboardLayout {
+    Azerty(Keyboard<layouts::Azerty, ScancodeSet1>),
+    Dvorak(Keyboard<layouts::Dvorak104Key, ScancodeSet1>),
+    Qwerty(Keyboard<layouts::Us104Key, ScancodeSet1>),
+}
 
-        // Step 4: Flush data buffer
-        let _ = controller.read_data();
-
-        // Step 5: Set config
-        let mut config = controller.read_config()?;
-        // Disable interrupts and scancode translation
-        config.set(ControllerConfigFlags::ENABLE_TRANSLATE, false);
-        controller.write_config(config)?;
-
-        // Step 6: Controller self-test
-        controller.test_controller()?;
-        // Write config again in case of controller reset
-        controller.write_config(config)?;
-
-        // Step 8: Interface tests
-        let keyboard_works = controller.test_keyboard().is_ok();
-
-        // Step 9 - 10: Enable and reset devices
-        config = controller.read_config()?;
-        if keyboard_works {
-            controller.enable_keyboard()?;
-            config.set(ControllerConfigFlags::DISABLE_KEYBOARD, false);
-            config.set(ControllerConfigFlags::ENABLE_KEYBOARD_INTERRUPT, true);
-            controller.keyboard().reset_and_self_test().unwrap();
+impl KeyboardLayout {
+    fn add_byte(&mut self, scancode: u8) -> Result<Option<KeyEvent>, Error> {
+        match self {
+            KeyboardLayout::Azerty(keyboard) => keyboard.add_byte(scancode),
+            KeyboardLayout::Dvorak(keyboard) => keyboard.add_byte(scancode),
+            KeyboardLayout::Qwerty(keyboard) => keyboard.add_byte(scancode),
         }
+    }
 
-        Ok(Mutex::new(controller))
-    })()
-    .unwrap()
-});
+    fn process_keyevent(&mut self, key_event: KeyEvent) -> Option<DecodedKey> {
+        match self {
+            KeyboardLayout::Azerty(keyboard) => keyboard.process_keyevent(key_event),
+            KeyboardLayout::Dvorak(keyboard) => keyboard.process_keyevent(key_event),
+            KeyboardLayout::Qwerty(keyboard) => keyboard.process_keyevent(key_event),
+        }
+    }
 
-static SCAN_CODES_TO_ASCII: phf::Map<u8, char> = phf::phf_map! {
-    0x1C_u8 => 'A',
-    0x32_u8 => 'B',
-    0x21_u8 => 'C',
-    0x23_u8 => 'D',
-    0x24_u8 => 'E',
-    0x2B_u8 => 'F',
-    0x34_u8 => 'G',
-    0x33_u8 => 'H',
-    0x43_u8 => 'I',
-    0x3B_u8 => 'J',
-    0x42_u8 => 'K',
-    0x4B_u8 => 'L',
-    0x3A_u8 => 'M',
-    0x31_u8 => 'N',
-    0x44_u8 => 'O',
-    0x4D_u8 => 'P',
-    0x15_u8 => 'Q',
-    0x2D_u8 => 'R',
-    0x1B_u8 => 'S',
-    0x2C_u8 => 'T',
-    0x3C_u8 => 'U',
-    0x2A_u8 => 'V',
-    0x1D_u8 => 'W',
-    0x22_u8 => 'X',
-    0x35_u8 => 'Y',
-    0x1A_u8 => 'Z',
-    0x45_u8 => '0',
-    0x16_u8 => '1',
-    0x1E_u8 => '2',
-    0x26_u8 => '3',
-    0x25_u8 => '4',
-    0x2E_u8 => '5',
-    0x36_u8 => '6',
-    0x3D_u8 => '7',
-    0x3E_u8 => '8',
-    0x46_u8 => '9',
+    fn from(name: &str) -> Option<Self> {
+        match name {
+            "azerty" => Some(KeyboardLayout::Azerty(Keyboard::new(
+                layouts::Azerty,
+                ScancodeSet1,
+                HandleControl::MapLettersToUnicode,
+            ))),
+            "dvorak" => Some(KeyboardLayout::Dvorak(Keyboard::new(
+                layouts::Dvorak104Key,
+                ScancodeSet1,
+                HandleControl::MapLettersToUnicode,
+            ))),
+            "qwerty" => Some(KeyboardLayout::Qwerty(Keyboard::new(
+                layouts::Us104Key,
+                ScancodeSet1,
+                HandleControl::MapLettersToUnicode,
+            ))),
+            _ => None,
+        }
+    }
+}
 
-};
+pub fn set_keyboard(layout: &str) -> bool {
+    if let Some(keyboard) = KeyboardLayout::from(layout) {
+        KEYBOARD.init(Mutex::new(keyboard));
+        true
+    } else {
+        false
+    }
+}
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Keyboard;
+pub fn init() {
+    set_keyboard(option_env!("KEYBOARD_LAYOUT").unwrap_or("qwerty"));
+}
 
-impl Keyboard {
-    /// Waits for a keypress and returns the keycode.
-    pub fn next_char() -> u8 {
-        let mut controller = CONTROLLER.lock();
-        loop {
-            if let Ok(c) = controller.read_data() && c != 240 {
-                return *SCAN_CODES_TO_ASCII.get(&c).unwrap_or(&'?') as u8;
-            }
+pub fn read_scancode() -> u8 {
+    let mut port = Port::new(0x60);
+    let scancode = unsafe { port.read() };
+    unsafe { port.write(0) };
+    scancode
+}
+
+pub fn read() -> char {
+    let mut keyboard = KEYBOARD.lock();
+
+    loop {
+        let scancode = read_scancode();
+        if let Ok(Some(key_event)) = keyboard.add_byte(scancode) &&
+                let Some(DecodedKey::Unicode(key)) = keyboard.process_keyevent(key_event) {
+            break key;
         }
     }
 }

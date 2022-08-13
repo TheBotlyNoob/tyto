@@ -7,6 +7,7 @@ impl<T> LateInit<T> {
     pub const fn new() -> Self {
         Self(Once::new())
     }
+
     pub fn init(&self, x: T) {
         self.0.call_once(|| x);
     }
