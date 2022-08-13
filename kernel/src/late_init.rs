@@ -30,3 +30,20 @@ impl<T> DerefMut for LateInit<T> {
         self.get_mut()
     }
 }
+
+#[test_case]
+fn test_late_init() {
+    let mut x = LateInit::<i32>::new();
+    x.init(42);
+    assert_eq!(*x, 42);
+}
+
+#[test_case]
+fn test_late_init_mutability() {
+    let mut x = LateInit::<i32>::new();
+    x.init(42);
+
+    *x = 43;
+
+    assert_eq!(*x, 43);
+}

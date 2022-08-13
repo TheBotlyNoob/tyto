@@ -50,6 +50,21 @@ impl Write for Logger {
     }
 }
 
+#[doc(hidden)]
+pub fn _print(args: core::fmt::Arguments) {
+    let _ = LOGGER.lock().write_fmt(args);
+}
+
+#[macro_export]
+macro_rules! print {
+    ($($arg:tt)*) => ($crate::log::_print(format_args!($($arg)*)));
+}
+#[macro_export]
+macro_rules! println {
+    () => ($crate::print!("\n"));
+    ($($arg:tt)*) => ($crate::print!("{}\n", format_args!($($arg)*)));
+}
+
 #[test_case]
 fn test_println_simple() {
     println!("test_println_simple output");
@@ -62,19 +77,9 @@ fn test_println_many() {
     }
 }
 
-#[doc(hidden)]
-pub fn _print(args: core::fmt::Arguments) {
-    let _ = LOGGER.lock().write_fmt(args);
+#[test_case]
+fn test_print_wrap() {
+    for _ in 0..200 {
+        print!("test_println_wrap output that should wrap");
+    }
 }
-
-macro_rules! print {
-    ($($arg:tt)*) => ($crate::log::_print(format_args!($($arg)*)));
-}
-macro_rules! println {
-    () => ($crate::print!("\n"));
-    ($($arg:tt)*) => ($crate::log::print!("{}\n", format_args!($($arg)*)));
-}
-
-pub(crate) use print;
-
-pub(crate) use println;

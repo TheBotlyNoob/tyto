@@ -21,10 +21,12 @@ pub mod framebuffer;
 pub mod keyboard;
 pub mod late_init;
 pub mod log;
+
+#[cfg(test)]
 pub mod tests;
 
 #[entry]
-fn main(_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
+pub fn main(_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
     let mut fb = framebuffer::FrameBuffer::new(&mut system_table);
     fb.clear(Rgb888::BLACK).unwrap();
     log::Logger::init(fb.clone());
@@ -35,10 +37,9 @@ fn main(_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
         halt();
     }
 
-    log::println!("Hello, world!");
-    log::println!("af\nter");
-    log::println!("abababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababab");
-
+    loop {
+        print!("{}", keyboard::Keyboard::next_char() as char);
+    }
     halt();
 }
 
@@ -50,7 +51,7 @@ pub fn halt() -> ! {
 
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
-    log::println!("{info}");
+    println!("{info}");
     #[cfg(test)]
     tests::exit_qemu(tests::QemuExitCode::Failed);
     halt();

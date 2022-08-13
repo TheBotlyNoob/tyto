@@ -1,5 +1,4 @@
-#[allow(unused_imports)]
-use crate::log::println;
+use crate::println;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
@@ -35,8 +34,8 @@ where
     T: Fn(),
 {
     fn run(&self) {
-        println!("{}...", core::any::type_name::<T>());
+        println!("\n{}...\n", core::any::type_name::<T>());
         self();
-        println!("[ok]");
+        println!("\n[ok]");
     }
 }

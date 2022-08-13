@@ -13,8 +13,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let target_dir = root.join("target");
     let bin = if args.contains(&String::from("--test")) {
-        let output = Command::new(env!("CARGO"))
-            .args(&[
+        let output = {
+            let mut cmd = Command::new(env!("CARGO"));
+            cmd.args(&[
                 "test",
                 #[cfg(not(debug_assertions))]
                 "--release",
@@ -27,13 +28,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ])
             .current_dir(root)
             .stdout(Stdio::piped())
-            .stderr(Stdio::null())
-            .output()?;
+            .stderr(Stdio::null());
+
+            println!("{cmd:#?}");
+            cmd.output()?
+        };
         let mut path = None;
         for message in Message::parse_stream(&*output.stdout).map(Result::unwrap) {
             if let Message::CompilerArtifact(artifact) = message {
-                if artifact.target.name == "kernel" {
-                    path.replace(artifact.executable.unwrap().into_std_path_buf());
+                if artifact.target.name == "kernel" && let Some(exe) = artifact.executable {
+                    path.replace(exe.into_std_path_buf());
                     break;
                 }
             }
@@ -62,8 +66,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     } else {
-        let output = Command::new(env!("CARGO"))
-            .args(&[
+        let output = {
+            let mut cmd = Command::new(env!("CARGO"));
+            cmd.args(&[
                 "build",
                 #[cfg(not(debug_assertions))]
                 "--release",
@@ -74,8 +79,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ])
             .current_dir(root)
             .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .status()?;
+            .stderr(Stdio::inherit());
+
+            println!("{cmd:#?}");
+            cmd.status()?
+        };
 
         if !output.success() {
             std::process::exit(1);
