@@ -21,9 +21,10 @@ pub mod framebuffer;
 pub mod keyboard;
 pub mod late_init;
 pub mod log;
+pub mod util;
 
 #[cfg(test)]
-pub mod tests;
+pub mod test;
 
 #[entry]
 pub fn main(_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
@@ -39,22 +40,6 @@ pub fn main(_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
     #[cfg(test)]
     {
         test_main();
-        halt();
+        util::halt();
     }
-
-    halt();
-}
-
-pub fn halt() -> ! {
-    loop {
-        x86_64::instructions::hlt();
-    }
-}
-
-#[panic_handler]
-fn panic(info: &core::panic::PanicInfo) -> ! {
-    println!("{info}");
-    #[cfg(test)]
-    tests::exit_qemu(tests::QemuExitCode::Failed);
-    halt();
 }

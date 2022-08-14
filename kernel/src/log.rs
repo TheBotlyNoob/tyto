@@ -37,7 +37,7 @@ impl Write for Logger {
             } else {
                 self.next_char = Text::new(
                     // SAFETY: The char comes from a string.
-                    unsafe { core::str::from_utf8(&[char as u8]).unwrap_unchecked() },
+                    unsafe { core::str::from_utf8_unchecked(&[char as u8]) },
                     self.next_char,
                     MonoTextStyle::new(&profont::PROFONT_24_POINT, Rgb888::WHITE),
                 )
