@@ -1,4 +1,5 @@
 use crate::late_init::LateInit;
+use alloc::string::String;
 use pc_keyboard::{layouts, DecodedKey, Error, HandleControl, KeyEvent, Keyboard, ScancodeSet1};
 use spin::Mutex;
 use x86_64::instructions::port::Port;
@@ -52,7 +53,7 @@ impl KeyboardLayout {
 
 pub fn set_keyboard(layout: &str) -> bool {
     if let Some(keyboard) = KeyboardLayout::from(layout) {
-        KEYBOARD.init(Mutex::new(keyboard));
+        KEYBOARD.init(|| Mutex::new(keyboard));
         true
     } else {
         false
@@ -63,7 +64,7 @@ pub fn init() {
     set_keyboard(option_env!("KEYBOARD_LAYOUT").unwrap_or("qwerty"));
 }
 
-pub fn read_scancode() -> u8 {
+fn read_scancode() -> u8 {
     let mut port = Port::new(0x60);
     let scancode = unsafe { port.read() };
     unsafe { port.write(0) };
@@ -79,5 +80,19 @@ pub fn read() -> char {
                 let Some(DecodedKey::Unicode(key)) = keyboard.process_keyevent(key_event) {
             break key;
         }
+    }
+}
+
+pub fn read_line(s: &mut String) {
+    loop {
+        let key = read();
+        if key == '\n' {
+            break;
+        } else if key == '\x08' {
+            s.pop();
+        } else {
+            s.push(key);
+        }
+        crate::print!("{key}");
     }
 }

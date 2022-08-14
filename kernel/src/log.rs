@@ -1,6 +1,6 @@
 use core::fmt::Write;
 
-use crate::{framebuffer::FrameBuffer, late_init::LateInit};
+use crate::{framebuffer::FRAMEBUFFER, late_init::LateInit};
 use embedded_graphics::{mono_font::MonoTextStyle, pixelcolor::Rgb888, prelude::*, text::Text};
 use spin::Mutex;
 use uart_16550::SerialPort;
@@ -9,24 +9,26 @@ pub static SERIAL1: Mutex<SerialPort> = Mutex::new(unsafe { SerialPort::new(0x3f
 pub static LOGGER: LateInit<Mutex<Logger>> = LateInit::new();
 
 pub struct Logger {
-    framebuffer: FrameBuffer,
     next_char: Point,
 }
 impl Logger {
-    pub fn init(framebuffer: FrameBuffer) {
-        SERIAL1.lock().init();
-        LOGGER.init(Mutex::new(Logger {
-            framebuffer,
-            next_char: Point::new(15, 30),
-        }));
-    }
     pub fn add_newline(&mut self) {
         self.next_char = Point::new(15, self.next_char.y + 26);
     }
     pub fn is_overflowing(&self) -> bool {
-        self.next_char.x > self.framebuffer.info.resolution().0 as i32 - 20
+        self.next_char.x > FRAMEBUFFER.lock().info.resolution().0 as i32 - 20
     }
 }
+
+pub fn init() {
+    SERIAL1.lock().init();
+    LOGGER.init(|| {
+        Mutex::new(Logger {
+            next_char: Point::new(15, 30),
+        })
+    });
+}
+
 impl Write for Logger {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
         SERIAL1.lock().write_str(s)?;
@@ -41,7 +43,7 @@ impl Write for Logger {
                     self.next_char,
                     MonoTextStyle::new(&profont::PROFONT_24_POINT, Rgb888::WHITE),
                 )
-                .draw(&mut self.framebuffer)
+                .draw(&mut *FRAMEBUFFER.lock())
                 .unwrap();
             }
         }

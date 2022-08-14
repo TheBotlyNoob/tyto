@@ -1,9 +1,13 @@
 use embedded_graphics::{pixelcolor::Rgb888, prelude::*, Pixel};
-use spin::Once;
+use spin::Mutex;
 use uefi::{
     prelude::*,
     proto::console::gop::{GraphicsOutput, Mode, ModeInfo},
 };
+
+use crate::late_init::LateInit;
+
+pub static FRAMEBUFFER: LateInit<Mutex<FrameBuffer>> = LateInit::new();
 
 #[derive(Debug, Clone)]
 pub struct FrameBuffer {
@@ -13,27 +17,23 @@ pub struct FrameBuffer {
 unsafe impl Sync for FrameBuffer {}
 unsafe impl Send for FrameBuffer {}
 
-impl FrameBuffer {
-    pub fn new(system_table: &mut SystemTable<Boot>) -> FrameBuffer {
-        static ONCE: Once<FrameBuffer> = Once::new();
-        ONCE.call_once(|| {
-            let gop = unsafe {
-                &mut *system_table
-                    .boot_services()
-                    .locate_protocol::<GraphicsOutput>()
-                    .expect("Graphics output protocol not found")
-                    .get()
-            };
+pub fn init(system_table: &mut SystemTable<Boot>) {
+    FRAMEBUFFER.init(|| {
+        let gop = unsafe {
+            &mut *system_table
+                .boot_services()
+                .locate_protocol::<GraphicsOutput>()
+                .expect("Graphics output protocol not found")
+                .get()
+        };
 
-            let mode = set_mode(gop);
+        let mode = set_mode(gop);
 
-            FrameBuffer {
-                info: *mode.info(),
-                ptr: gop.frame_buffer().as_mut_ptr() as _,
-            }
+        Mutex::new(FrameBuffer {
+            info: *mode.info(),
+            ptr: gop.frame_buffer().as_mut_ptr() as _,
         })
-        .clone()
-    }
+    });
 }
 
 impl DrawTarget for FrameBuffer {

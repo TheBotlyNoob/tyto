@@ -8,8 +8,8 @@ impl<T> LateInit<T> {
         Self(Once::new())
     }
 
-    pub fn init(&self, x: T) {
-        self.0.call_once(|| x);
+    pub fn init(&self, x: impl FnOnce() -> T) {
+        self.0.call_once(x);
     }
 
     pub fn get(&self) -> &T {
