@@ -1,5 +1,5 @@
 [alias]
-kbuild = "run --release -- no-run"
+kbuild = "run --release -- --no-run"
 b = "kbuild"
 kclippy = "clippy --target=x86_64-unknown-uefi --package=kernel -Zbuild-std=core,compiler_builtins,alloc -Zbuild-std-features=compiler-builtins-mem"
 ktest = "run --release -- --test"

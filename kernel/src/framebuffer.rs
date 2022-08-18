@@ -29,10 +29,14 @@ pub fn init(system_table: &mut SystemTable<Boot>) {
 
         let mode = set_mode(gop);
 
-        Mutex::new(FrameBuffer {
+        let mut fb = FrameBuffer {
             info: *mode.info(),
             ptr: gop.frame_buffer().as_mut_ptr() as _,
-        })
+        };
+
+        let _ = fb.clear(Rgb888::BLACK);
+
+        Mutex::new(fb)
     });
 }
 

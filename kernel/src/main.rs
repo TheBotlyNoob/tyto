@@ -4,7 +4,8 @@
     abi_efiapi,
     abi_x86_interrupt,
     custom_test_frameworks,
-    alloc_error_handler
+    alloc_error_handler,
+    if_let_guard
 )]
 #![test_runner(crate::tests::test_runner)]
 #![reexport_test_harness_main = "test_main"]
@@ -19,10 +20,6 @@ compile_error!(concat!(
 extern crate alloc;
 
 use alloc::string::String;
-use embedded_graphics::{
-    pixelcolor::Rgb888,
-    prelude::{DrawTarget, RgbColor},
-};
 use uefi::prelude::*;
 
 pub mod framebuffer;
@@ -40,12 +37,7 @@ static ALLOCATOR: static_alloc::Bump<[u8; 4 << 16]> = static_alloc::Bump::uninit
 #[entry]
 pub fn main(_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
     framebuffer::init(&mut system_table);
-    framebuffer::FRAMEBUFFER
-        .lock()
-        .clear(Rgb888::BLACK)
-        .unwrap();
     log::init();
-    keyboard::init();
 
     #[cfg(test)]
     {
@@ -58,14 +50,13 @@ pub fn main(_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
         print!("> ");
         input.clear();
         keyboard::read_line(&mut input);
-        if input.is_empty() {
-            println!();
-            continue;
+
+        match input.as_str() {
+            "" => println!(),
+            _ if let Some(echo) = input.strip_prefix("echo ") => println!("\n{echo}"),
+            "exit" => break,
+            _ => println!("\nUnknown command: {input}"),
         }
-        if input == "exit" {
-            break;
-        }
-        println!("\n{}", input);
     }
 
     util::halt();
