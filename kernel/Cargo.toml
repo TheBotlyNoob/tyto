@@ -1,16 +1,18 @@
+cargo-features = ["per-package-target"]
+
 [package]
 name = "kernel"
 version = "0.1.0"
 edition = "2021"
+default-target = "x86_64-unknown-none"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-uefi = { version = "0.16.0", default-features = false }
-embedded-graphics = "0.7"
-profont = "0.6"
-spin = "0.9"
-uart_16550 = "0.2"
-x86_64 = "0.14"
-pc-keyboard = { git = "https://github.com/TheBotlyNoob/pc-keyboard.git" }
-static-alloc = "0.2"
+bootloader_api = "0.1.0-alpha.0"
+uart_16550 = "0.2.10"
+
+[dependencies.noto-sans-mono-bitmap]
+version = "0.1.2"
+default-features = false
+features = ["regular", "size_14"]

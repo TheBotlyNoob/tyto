@@ -1,12 +1,8 @@
 [workspace]
-members = ["kernel", "qemu"]
+members = ["qemu", "kernel"]
+resolver = "2"
 
-
-[profile.dev]
-opt-level = 3
-
-[profile.release]
-codegen-units = 1
-opt-level = 3
-lto = true
-strip = true
+[patch.crates-io]
+# Change this to the revision of the bootloader you want to test.
+bootloader = { git = "https://github.com/rust-osdev/bootloader", rev = "f95e9a9", package = "bootloader", version = "=0.11.0-alpha.0" }
+bootloader_api = { git = "https://github.com/rust-osdev/bootloader", rev = "f95e9a9", package = "bootloader_api", version = "=0.1.0-alpha.0" }

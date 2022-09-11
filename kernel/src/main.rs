@@ -1,63 +1,113 @@
-#![no_main]
 #![no_std]
-#![feature(
-    abi_efiapi,
-    abi_x86_interrupt,
-    custom_test_frameworks,
-    alloc_error_handler,
-    if_let_guard
-)]
-#![test_runner(crate::tests::test_runner)]
-#![reexport_test_harness_main = "test_main"]
+#![no_main]
+#![feature(lang_items)]
 
-#[cfg(not(all(target_arch = "x86_64", target_vendor = "unknown", target_os = "uefi")))]
-compile_error!(concat!(
-    "Targets other than `x86_64-unknown-uefi` are not supported",
-    "\n",
-    "Are you using `cargo build`? Try `cargo kbuild` instead."
-));
+use core::panic::PanicInfo;
 
-extern crate alloc;
+use bootloader_api::{
+    config::Mapping,
+    entry_point,
+    info::{MemoryRegionKind, Optional},
+    BootInfo, BootloaderConfig,
+};
+use logger::{log, Color};
 
-use alloc::string::String;
-use uefi::prelude::*;
+mod graphical;
+mod logger;
 
-pub mod framebuffer;
-pub mod keyboard;
-pub mod late_init;
-pub mod log;
-pub mod util;
+const CONFIG: BootloaderConfig = {
+    let mut config = BootloaderConfig::new_default();
 
-#[cfg(test)]
-pub mod test;
+    config.mappings.physical_memory = Some(Mapping::Dynamic);
 
-#[global_allocator]
-static ALLOCATOR: static_alloc::Bump<[u8; 4 << 16]> = static_alloc::Bump::uninit();
+    config
+};
 
-#[entry]
-pub fn main(_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
-    framebuffer::init(&mut system_table);
-    log::init();
+entry_point!(main, config = &CONFIG);
 
-    #[cfg(test)]
-    {
-        test_main();
-        util::halt();
+fn main(boot_info: &'static mut BootInfo) -> ! {
+    let framebuffer = core::mem::replace(&mut boot_info.framebuffer, Optional::None);
+    let framebuffer = framebuffer.into_option();
+
+    logger::init(framebuffer);
+
+    let prelease_str = if boot_info.api_version.pre_release() {
+        "(prerelease)"
+    } else {
+        ""
+    };
+    log(
+        format_args!(
+            "Bootloader version: {}.{}.{} {}",
+            boot_info.api_version.version_major(),
+            boot_info.api_version.version_minor(),
+            boot_info.api_version.version_patch(),
+            prelease_str
+        ),
+        Color::White,
+    );
+
+    let physical_memory_offset = boot_info
+        .physical_memory_offset
+        .into_option()
+        .expect("the bootloader should map all physical memory for us");
+    loggger::info!("Physical memory offset: {physical_memory_offset:#018x}");
+
+    log(
+        format_args!("Memory regions: {}", boot_info.memory_regions.len()),
+        Color::White,
+    );
+
+    // Merge contiguous memory regions of the same kind and log them.
+    boot_info
+        .memory_regions
+        .sort_unstable_by_key(|region| region.start);
+    let mut iter = boot_info.memory_regions.iter().copied();
+    if let Some(mut prev) = iter.next() {
+        for next in iter {
+            if prev.end != next.start || prev.kind != next.kind {
+                log(
+                    format_args!("{:#018x} - {:#018x}: {:?}", prev.start, prev.end, prev.kind),
+                    Color::White,
+                );
+
+                prev = next;
+            } else {
+                prev.end = next.end;
+            }
+        }
+
+        log(
+            format_args!("{:#018x} - {:#018x}: {:?}", prev.start, prev.end, prev.kind),
+            Color::White,
+        );
     }
 
-    let mut input = String::new();
-    loop {
-        print!("> ");
-        input.clear();
-        keyboard::read_line(&mut input);
+    log("Writing to usable memory regions", Color::White);
 
-        match input.as_str() {
-            "" => println!(),
-            _ if let Some(echo) = input.strip_prefix("echo ") => println!("\n{echo}"),
-            "exit" => break,
-            _ => println!("\nUnknown command: {input}"),
+    for region in boot_info
+        .memory_regions
+        .iter()
+        .filter(|region| region.kind == MemoryRegionKind::Usable)
+    {
+        let addr = physical_memory_offset + region.start;
+        let size = region.end - region.start;
+        unsafe {
+            core::ptr::write_bytes(addr as *mut u8, 0xff, size as usize);
         }
     }
 
-    util::halt();
+    log("Done!", Color::White);
+
+    loop {}
 }
+
+#[panic_handler]
+fn panic_handler(info: &PanicInfo) -> ! {
+    log(format_args!("{info}"), Color::Red);
+
+    loop {}
+}
+
+#[lang = "eh_personality"]
+fn eh_personality() {}
