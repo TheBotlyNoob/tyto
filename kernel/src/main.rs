@@ -10,7 +10,8 @@ use bootloader_api::{
     info::{MemoryRegionKind, Optional},
     BootInfo, BootloaderConfig,
 };
-use logger::{log, Color};
+
+use logger::Color;
 
 mod graphical;
 mod logger;
@@ -36,27 +37,21 @@ fn main(boot_info: &'static mut BootInfo) -> ! {
     } else {
         ""
     };
-    log(
-        format_args!(
-            "Bootloader version: {}.{}.{} {}",
-            boot_info.api_version.version_major(),
-            boot_info.api_version.version_minor(),
-            boot_info.api_version.version_patch(),
-            prelease_str
-        ),
-        Color::White,
+    log::info!(
+        "Bootloader version: {}.{}.{} {}",
+        boot_info.api_version.version_major(),
+        boot_info.api_version.version_minor(),
+        boot_info.api_version.version_patch(),
+        prelease_str
     );
 
     let physical_memory_offset = boot_info
         .physical_memory_offset
         .into_option()
         .expect("the bootloader should map all physical memory for us");
-    loggger::info!("Physical memory offset: {physical_memory_offset:#018x}");
+    log::info!("Physical memory offset: {physical_memory_offset:#018x}");
 
-    log(
-        format_args!("Memory regions: {}", boot_info.memory_regions.len()),
-        Color::White,
-    );
+    log::info!("Memory regions: {}", boot_info.memory_regions.len(),);
 
     // Merge contiguous memory regions of the same kind and log them.
     boot_info
@@ -66,10 +61,7 @@ fn main(boot_info: &'static mut BootInfo) -> ! {
     if let Some(mut prev) = iter.next() {
         for next in iter {
             if prev.end != next.start || prev.kind != next.kind {
-                log(
-                    format_args!("{:#018x} - {:#018x}: {:?}", prev.start, prev.end, prev.kind),
-                    Color::White,
-                );
+                log::info!("{:#018x} - {:#018x}: {:?}", prev.start, prev.end, prev.kind,);
 
                 prev = next;
             } else {
@@ -77,13 +69,10 @@ fn main(boot_info: &'static mut BootInfo) -> ! {
             }
         }
 
-        log(
-            format_args!("{:#018x} - {:#018x}: {:?}", prev.start, prev.end, prev.kind),
-            Color::White,
-        );
+        log::info!("{:#018x} - {:#018x}: {:?}", prev.start, prev.end, prev.kind,);
     }
 
-    log("Writing to usable memory regions", Color::White);
+    log::info!("Writing to usable memory regions");
 
     for region in boot_info
         .memory_regions
@@ -97,14 +86,14 @@ fn main(boot_info: &'static mut BootInfo) -> ! {
         }
     }
 
-    log("Done!", Color::White);
+    log::info!("Done!");
 
     loop {}
 }
 
 #[panic_handler]
 fn panic_handler(info: &PanicInfo) -> ! {
-    log(format_args!("{info}"), Color::Red);
+    log::error!("{info}");
 
     loop {}
 }

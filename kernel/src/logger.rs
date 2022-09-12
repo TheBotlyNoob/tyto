@@ -1,4 +1,4 @@
-use core::fmt::{Display, Write};
+use core::fmt::Write;
 
 use bootloader_api::info::FrameBuffer;
 use uart_16550::SerialPort;
@@ -20,36 +20,38 @@ pub fn init(framebuffer: Option<FrameBuffer>) {
     graphical::init_framebuffer(framebuffer);
 }
 
-pub fn log(display: impl Display, color: Color) {
-    graphical::write(&display, color);
+pub struct Logger;
 
-    unsafe {
-        write!(SERIAL_PORT, "{}{display}\r\n", color.escape_sequence()).unwrap();
+impl log::Log for Logger {
+    fn enabled(&self, metadata: &log::Metadata) -> bool {
+        metadata.level() <= log::Level::Info
     }
-}
 
-macro_rules! error {
-    ($($arg:tt)*) => {
-        $crate::logger::log(format_args!($($arg)*), $crate::logger::Color::Red);
-    };
-}
+    fn log(&self, record: &log::Record) {
+        let color = match record.level() {
+            log::Level::Error => Color::Red,
+            log::Level::Warn => Color::Yellow,
+            log::Level::Info => Color::White,
+            log::Level::Debug => Color::Blue,
+            log::Level::Trace => Color::Green,
+        };
 
-macro_rules! warn {
-    ($($arg:tt)*) => {
-        $crate::logger::log(format_args!($($arg)*), $crate::logger::Color::Yellow);
-    };
-}
+        /// the actual logging implementation
+        fn _log(s: core::fmt::Arguments, color: Color) {
+            graphical::write(&s, color);
 
-macro_rules! info {
-    ($($arg:tt)*) => {
-        $crate::logger::log(format_args!($($arg)*), $crate::logger::Color::White);
-    };
-}
+            unsafe {
+                write!(SERIAL_PORT, "{}{s}\r\n", color.escape_sequence()).unwrap();
+            }
+        }
 
-macro_rules! debug {
-    ($($arg:tt)*) => {
-        $crate::logger::log(format_args!($($arg)*), $crate::logger::Color::Blue);
-    };
+        _log(
+            format_args!("[{}] {}", record.level(), record.args()),
+            color,
+        );
+    }
+
+    fn flush(&self) {}
 }
 
 impl Color {
