@@ -1,6 +1,7 @@
 #![no_std]
 #![no_main]
-#![feature(lang_items)]
+#![warn(clippy::pedantic)]
+#![feature(lang_items, unsized_fn_params)]
 
 use core::panic::PanicInfo;
 
@@ -11,9 +12,8 @@ use bootloader_api::{
     BootInfo, BootloaderConfig,
 };
 
-use logger::Color;
-
 mod graphical;
+mod late_init;
 mod logger;
 
 const CONFIG: BootloaderConfig = {

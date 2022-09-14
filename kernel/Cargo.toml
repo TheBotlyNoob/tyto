@@ -12,8 +12,6 @@ default-target = "x86_64-unknown-none"
 bootloader_api = "0.1.0-alpha.0"
 uart_16550 = "0.2.10"
 log = "0.4"
-
-[dependencies.noto-sans-mono-bitmap]
-version = "0.1.2"
-default-features = false
-features = ["regular", "size_14"]
+profont = "0.6"
+embedded-graphics = "0.7"
+spin = "0.9"

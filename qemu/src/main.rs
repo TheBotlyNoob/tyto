@@ -15,6 +15,7 @@ fn main() -> Result<()> {
     cmd.arg("-bios").arg(ovmf_prebuilt::ovmf_pure_efi());
     #[cfg(target_os = "linux")]
     cmd.arg("-enable-kvm");
+    cmd.arg("-serial").arg("stdio");
     cmd.arg("-drive")
         .arg(format!("format=raw,file={}", out_gpt_path.display()));
     let mut child = cmd.spawn()?;
