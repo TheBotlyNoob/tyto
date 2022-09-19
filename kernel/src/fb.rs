@@ -84,6 +84,7 @@ impl Write for TextWriter {
         // SAFETY: The char comes from a string.
         let string = unsafe { core::str::from_utf8_unchecked(&string) };
         let style = MonoTextStyle::new(&profont::PROFONT_18_POINT, Rgb888::WHITE);
+
         if c == '\n'
             || style
                 .measure_string(string, self.0, Baseline::Bottom)
@@ -94,9 +95,13 @@ impl Write for TextWriter {
             self.0 = Point::new(5, self.0.y + 26);
         }
 
-        self.0 = Text::new(string, self.0, style)
-            .draw(&mut *FRAMEBUFFER.fb.lock())
-            .unwrap();
+        let fb = &mut *FRAMEBUFFER.fb.lock();
+        if self.0.y as usize > FRAMEBUFFER.info.height {
+            fb.clear(Rgb888::BLACK).unwrap();
+            self.0 = Point::new(5, 20);
+        }
+
+        self.0 = Text::new(string, self.0, style).draw(fb).unwrap();
 
         Ok(())
     }

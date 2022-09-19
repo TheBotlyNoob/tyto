@@ -1,25 +1,19 @@
 #![no_std]
 #![no_main]
 #![warn(clippy::pedantic)]
-#![feature(decl_macro, lang_items, unsized_fn_params)]
+#![feature(decl_macro, lang_items)]
 
 use core::panic::PanicInfo;
 
-use bootloader_api::{config::Mapping, entry_point, info::Optional, BootInfo, BootloaderConfig};
+use bootloader_api::{entry_point, info::Optional, BootInfo};
+
+use crate::logger::print;
 
 mod fb;
 mod late_init;
 mod logger;
 
-const CONFIG: BootloaderConfig = {
-    let mut config = BootloaderConfig::new_default();
-
-    config.mappings.physical_memory = Some(Mapping::Dynamic);
-
-    config
-};
-
-entry_point!(main, config = &CONFIG);
+entry_point!(main);
 
 fn main(boot_info: &'static mut BootInfo) -> ! {
     let framebuffer = core::mem::replace(&mut boot_info.framebuffer, Optional::None);
@@ -31,6 +25,9 @@ fn main(boot_info: &'static mut BootInfo) -> ! {
 
     log::info!("Done!");
     log::info!("another");
+    for i in 0..1000 {
+        print!("{i}-");
+    }
 
     loop {}
 }
