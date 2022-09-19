@@ -4,12 +4,12 @@ use bootloader_api::info::FrameBuffer;
 use log::Log;
 use uart_16550::SerialPort;
 
-use crate::graphical;
+use crate::fb;
 
 static mut SERIAL_PORT: SerialPort = unsafe { SerialPort::new(0x03F8) };
 
 pub fn init(framebuffer: Option<FrameBuffer>) {
-    graphical::init_framebuffer(framebuffer);
+    fb::init_framebuffer(framebuffer);
     log::set_logger(&Logger).unwrap();
     log::set_max_level(log::LevelFilter::Trace);
 }

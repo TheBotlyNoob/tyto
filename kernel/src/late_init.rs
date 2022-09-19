@@ -1,7 +1,7 @@
 use core::ops::{Deref, DerefMut};
 use spin::Once;
 
-/// Convenient wrapper around [`Once`] that provides a `Deref`/`DerefMut` impl.
+/// Convenient wrapper around [`Once`] that provides a [`Deref`]/[`DerefMut`] impl.
 pub struct LateInit<T>(Once<T>);
 impl<T> LateInit<T> {
     pub const fn new() -> Self {

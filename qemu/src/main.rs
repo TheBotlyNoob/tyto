@@ -13,8 +13,6 @@ fn main() -> Result<()> {
 
     let mut cmd = Command::new("qemu-system-x86_64");
     cmd.arg("-bios").arg(ovmf_prebuilt::ovmf_pure_efi());
-    #[cfg(target_os = "linux")]
-    cmd.arg("-enable-kvm");
     cmd.arg("-serial").arg("stdio");
     cmd.arg("-drive")
         .arg(format!("format=raw,file={}", out_gpt_path.display()));

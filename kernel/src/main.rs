@@ -11,8 +11,12 @@ use bootloader_api::{
     info::{MemoryRegionKind, Optional},
     BootInfo, BootloaderConfig,
 };
+use embedded_graphics::{
+    pixelcolor::Rgb888,
+    prelude::{DrawTarget, RgbColor},
+};
 
-mod graphical;
+mod fb;
 mod late_init;
 mod logger;
 
@@ -31,6 +35,8 @@ fn main(boot_info: &'static mut BootInfo) -> ! {
     let framebuffer = framebuffer.into_option();
 
     logger::init(framebuffer);
+
+    fb::FRAMEBUFFER.get().clear(Rgb888::GREEN).unwrap();
 
     let prelease_str = if boot_info.api_version.pre_release() {
         "(prerelease)"
