@@ -1,15 +1,17 @@
-use core::{cell::UnsafeCell, convert::Infallible};
-
 use crate::late_init::LateInit;
-use bootloader_api::info::{FrameBuffer as InnerFrameBuffer, PixelFormat};
+use bootloader_api::info::{FrameBuffer as InnerFrameBuffer, FrameBufferInfo, PixelFormat};
+use core::{convert::Infallible, fmt::Write};
 use embedded_graphics::{
+    mono_font::MonoTextStyle,
     pixelcolor::{Gray8, Rgb888},
-    prelude::{DrawTarget, GrayColor, IntoStorage, OriginDimensions, Size},
+    prelude::*,
+    text::{renderer::TextRenderer, Baseline, Text},
     Pixel,
 };
+use spin::Mutex;
 
-pub struct FrameBufferWriter<'a>(&'a mut InnerFrameBuffer);
-impl DrawTarget for FrameBufferWriter<'_> {
+pub struct FrameBufferWriter(InnerFrameBuffer);
+impl DrawTarget for FrameBufferWriter {
     type Color = Rgb888;
     type Error = Infallible;
 
@@ -17,7 +19,6 @@ impl DrawTarget for FrameBufferWriter<'_> {
     where
         I: IntoIterator<Item = embedded_graphics::Pixel<Self::Color>>,
     {
-        log::info!("{:#?}", self.0.info());
         for Pixel(coord, color) in pixels.into_iter() {
             let info = self.0.info();
             // Check if the pixel coordinates are out of bounds (negative or greater than
@@ -43,28 +44,17 @@ impl DrawTarget for FrameBufferWriter<'_> {
         Ok(())
     }
 }
-impl OriginDimensions for FrameBufferWriter<'_> {
+impl OriginDimensions for FrameBufferWriter {
     fn size(&self) -> Size {
         Size::new(self.0.info().width as u32, self.0.info().height as u32)
     }
 }
 
-pub struct FrameBuffer(LateInit<UnsafeCell<InnerFrameBuffer>>);
-unsafe impl Sync for FrameBuffer {}
-unsafe impl Send for FrameBuffer {}
-impl FrameBuffer {
-    pub const fn new() -> Self {
-        Self(LateInit::new())
-    }
-    pub fn init(&self, framebuffer: InnerFrameBuffer) {
-        self.0.init(UnsafeCell::new(framebuffer))
-    }
-    pub fn get(&self) -> FrameBufferWriter<'_> {
-        FrameBufferWriter(unsafe { &mut *self.0.get().get() })
-    }
+pub struct FrameBuffer {
+    fb: Mutex<FrameBufferWriter>,
+    info: FrameBufferInfo,
 }
-
-pub static FRAMEBUFFER: FrameBuffer = FrameBuffer::new();
+pub static FRAMEBUFFER: LateInit<FrameBuffer> = LateInit::new();
 
 pub fn init_framebuffer(fb: Option<InnerFrameBuffer>) {
     let mut fb = fb.expect("no framebuffer");
@@ -74,5 +64,47 @@ pub fn init_framebuffer(fb: Option<InnerFrameBuffer>) {
         panic!("framebuffer has unsupported pixel format");
     }
 
-    FRAMEBUFFER.init(fb);
+    FRAMEBUFFER.init(FrameBuffer {
+        info: fb.info(),
+        fb: Mutex::new(FrameBufferWriter(fb)),
+    });
+}
+
+pub static TEXT_WRITER: Mutex<TextWriter> = Mutex::new(TextWriter::new());
+
+pub struct TextWriter(Point);
+impl TextWriter {
+    const fn new() -> Self {
+        Self(Point::new(5, 20))
+    }
+}
+impl Write for TextWriter {
+    fn write_char(&mut self, c: char) -> core::fmt::Result {
+        let string = [c as u8];
+        // SAFETY: The char comes from a string.
+        let string = unsafe { core::str::from_utf8_unchecked(&string) };
+        let style = MonoTextStyle::new(&profont::PROFONT_18_POINT, Rgb888::WHITE);
+        if c == '\n'
+            || style
+                .measure_string(string, self.0, Baseline::Bottom)
+                .next_position
+                .x as usize
+                > FRAMEBUFFER.info.width
+        {
+            self.0 = Point::new(5, self.0.y + 26);
+        }
+
+        self.0 = Text::new(string, self.0, style)
+            .draw(&mut *FRAMEBUFFER.fb.lock())
+            .unwrap();
+
+        Ok(())
+    }
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
+        for c in s.chars() {
+            self.write_char(c)?;
+        }
+
+        Ok(())
+    }
 }
