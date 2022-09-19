@@ -25,8 +25,8 @@ fn main(boot_info: &'static mut BootInfo) -> ! {
 
     log::info!("Done!");
     log::info!("another");
-    for i in 0..1000 {
-        print!("{i}-");
+    for i in 0..=1000 {
+        print!("-{i}");
     }
 
     loop {}

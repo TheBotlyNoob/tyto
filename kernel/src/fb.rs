@@ -81,7 +81,7 @@ impl TextWriter {
 impl Write for TextWriter {
     fn write_char(&mut self, c: char) -> core::fmt::Result {
         let string = [c as u8];
-        // SAFETY: The char comes from a string.
+        // SAFETY: We can assume it's a valid char.
         let string = unsafe { core::str::from_utf8_unchecked(&string) };
         let style = MonoTextStyle::new(&profont::PROFONT_18_POINT, Rgb888::WHITE);
 
@@ -105,6 +105,7 @@ impl Write for TextWriter {
 
         Ok(())
     }
+
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
         for c in s.chars() {
             self.write_char(c)?;
