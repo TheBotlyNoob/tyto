@@ -8,30 +8,31 @@
 use bootloader_api::{entry_point, info::Optional, BootInfo};
 use core::panic::PanicInfo;
 
+mod data;
 mod fb;
 mod interrupts;
-mod late_init;
 mod logger;
 #[cfg(test)]
 mod tests;
-mod util;
 
 entry_point!(main);
 
 fn main(boot_info: &'static mut BootInfo) -> ! {
-    let framebuffer = core::mem::replace(&mut boot_info.framebuffer, Optional::None);
-    let framebuffer = framebuffer.into_option();
+    let framebuffer = core::mem::replace(&mut boot_info.framebuffer, Optional::None).into_option();
 
     interrupts::init_idt();
-    logger::init(framebuffer);
+    fb::init_framebuffer(framebuffer);
+    logger::init();
+
+    log::info!("Hello World{}", "!");
 
     #[cfg(test)]
     {
         test_main();
         tests::exit_qemu(tests::QemuExitCode::Success);
     }
-
-    util::halt();
+    #[cfg(not(test))]
+    halt();
 }
 
 #[panic_handler]
@@ -41,8 +42,14 @@ fn panic_handler(info: &PanicInfo) -> ! {
     #[cfg(test)]
     tests::exit_qemu(tests::QemuExitCode::Failed);
 
-    util::halt();
+    halt();
 }
 
 #[lang = "eh_personality"]
 fn eh_personality() {}
+
+pub fn halt() -> ! {
+    loop {
+        x86_64::instructions::hlt();
+    }
+}

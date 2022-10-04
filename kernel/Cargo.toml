@@ -9,7 +9,7 @@ default-target = "x86_64-unknown-none"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bootloader_api = "0.1.0-alpha.0"
+bootloader_api = { git = "https://github.com/rust-osdev/bootloader", branch = "next" }
 x86_64 = "0.14"
 uart_16550 = "0.2.10"
 log = "0.4"
