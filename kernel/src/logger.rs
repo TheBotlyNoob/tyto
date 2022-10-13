@@ -37,8 +37,6 @@ impl Log for Logger {
 
 pub static TEXT_WRITER: Mutex<TextWriter> = Mutex::new(TextWriter::new());
 
-// TODO(@TheBotlyNoob): Fix the logger in BIOS mode
-
 pub struct TextWriter(Point);
 impl TextWriter {
     const fn new() -> Self {
@@ -46,6 +44,7 @@ impl TextWriter {
     }
 }
 impl Write for TextWriter {
+    #[allow(clippy::cast_sign_loss)]
     fn write_char(&mut self, c: char) -> core::fmt::Result {
         let string = [c as u8];
         // SAFETY: We can assume it's a valid char.

@@ -253,8 +253,10 @@ name = "kernel"
 version = "0.1.0"
 dependencies = [
  "bootloader_api",
+ "cfg-if",
  "embedded-graphics",
  "log",
+ "no-panic",
  "profont",
  "spin",
  "uart_16550",
@@ -309,6 +311,17 @@ name = "micromath"
 version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bc4010833aea396656c2f91ee704d51a6f1329ec2ab56ffd00bfd56f7481ea94"
+
+[[package]]
+name = "no-panic"
+version = "0.1.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3b884e0f4a7a80970539a7757902675ce503d98615f5b564564b4bd0236f7f36"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
 
 [[package]]
 name = "num-integer"

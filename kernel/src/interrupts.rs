@@ -11,6 +11,8 @@ use x86_64::{
 
 pub const DOUBLE_FAULT_IST: u16 = 0;
 
+pub const STACK_SIZE: usize = 5 * 1024; // 5 KiB - minimum stack size to print the panic message
+
 static IDT: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
     let mut idt = InterruptDescriptorTable::new();
     idt.breakpoint.set_handler_fn(breakpoint_handler);
@@ -25,12 +27,10 @@ static IDT: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
 static TSS: Lazy<TaskStateSegment> = Lazy::new(|| {
     let mut tss = TaskStateSegment::new();
     tss.interrupt_stack_table[DOUBLE_FAULT_IST as usize] = {
-        const STACK_SIZE: usize = 5 * 1024; // 5 KiB - minimum stack size to print the panic message
         static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
 
         let stack_start = x86_64::VirtAddr::from_ptr(unsafe { &STACK });
-        let stack_end = stack_start + STACK_SIZE;
-        stack_end
+        stack_start + STACK_SIZE // stack end
     };
     tss
 });

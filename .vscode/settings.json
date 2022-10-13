@@ -1,12 +1,4 @@
 {
     "rust-analyzer.cargo.target": "x86_64-unknown-none",
-    "rust-analyzer.checkOnSave.extraArgs": ["-Z", "build-std", "-p", "kernel"],
-    "rust-analyzer.checkOnSave.allTargets": false,
-    "rust-analyzer.checkOnSave.overrideCommand": [
-        "cargo",
-        "check",
-        "-p",
-        "kernel",
-        "--message-format=json"
-    ]
+    "rust-analyzer.checkOnSave.allTargets": false
 }

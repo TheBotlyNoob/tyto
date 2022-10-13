@@ -31,10 +31,7 @@ pub trait Testable {
     fn run(&self);
 }
 
-impl<T> Testable for T
-where
-    T: Fn(),
-{
+impl<T: FnOnce()> Testable for T {
     fn run(&self) {
         log::info!("\n{}...\n", core::any::type_name::<T>());
         self();

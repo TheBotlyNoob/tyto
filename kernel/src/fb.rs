@@ -1,4 +1,7 @@
-use crate::data::LateInit;
+use crate::{
+    data::LateInit,
+    logger::{sprint, sprintln},
+};
 use bootloader_api::info::{FrameBuffer as InnerFrameBuffer, FrameBufferInfo, PixelFormat};
 use core::convert::Infallible;
 use embedded_graphics::{
@@ -8,41 +11,62 @@ use embedded_graphics::{
 };
 use spin::Mutex;
 
+// TODO(@TheBotlyNoob): Fix in BIOS mode
+
 pub struct FrameBufferWriter(InnerFrameBuffer);
 impl DrawTarget for FrameBufferWriter {
     type Color = Rgb888;
     type Error = Infallible;
 
+    #[allow(
+        clippy::cast_possible_truncation,
+        clippy::cast_possible_wrap,
+        clippy::cast_sign_loss
+    )]
     fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
     where
         I: IntoIterator<Item = embedded_graphics::Pixel<Self::Color>>,
     {
-        for Pixel(coord, color) in pixels.into_iter() {
-            let info = self.0.info();
-            // Check if the pixel coordinates are out of bounds (negative or greater than
-            // the resolution). `DrawTarget` implementation are required to discard
-            // any out of bounds pixels without returning an error or causing a panic.
-            let (max_x, max_y) = (self.0.info().width, self.0.info().height);
+        let info = self.0.info();
+        sprintln!("{info:#?}");
 
-            if coord.x < 0 || coord.x >= max_x as _ || coord.y < 0 || coord.y >= max_y as _ {
-                continue;
+        for Pixel(coord, color) in pixels {
+            // sleep for 0.5 seconds
+            for _ in 0..100_000 {
+                unsafe { core::arch::asm!("nop") };
             }
             // Calculate the index in the framebuffer.
             let index = (coord.x + coord.y * info.stride as i32) as usize;
-            let buf = unsafe { core::mem::transmute::<_, &mut [u32]>(self.0.buffer_mut()) };
-            match info.pixel_format {
-                PixelFormat::Rgb => buf[index] = color.into_storage(),
-                PixelFormat::Bgr => buf[index] = color.into_storage().swap_bytes(),
-                // Using the normal buffer because there will only be one u8 per pixel
-                PixelFormat::U8 => self.0.buffer_mut()[index] = Gray8::from(color).luma(),
-                _ => unimplemented!(),
+
+            macro buf {
+                (u32, $x:expr) => {
+                    buf!(unsafe {
+                        &mut *core::ptr::slice_from_raw_parts_mut(
+                            (self.0.buffer_mut() as *mut [u8]).cast::<u32>(),
+                            self.0.buffer().len() / 4,
+                        )
+                    }, $x)
+                },
+                (u8, $x:expr) => {
+                    buf!(self.0.buffer_mut(), $x)
+                },
+                ($buf:expr, $x:expr) => {{
+                    $buf.get_mut(index).map(|x| *x = $x);
+                }},
             }
+            match info.pixel_format {
+                PixelFormat::Rgb => buf!(u32, color.into_storage()),
+                PixelFormat::Bgr => buf!(u32, color.into_storage().swap_bytes()),
+                PixelFormat::U8 => buf!(u8, Gray8::from(color).luma()),
+                _ => unimplemented!(),
+            };
         }
 
         Ok(())
     }
 }
 impl OriginDimensions for FrameBufferWriter {
+    #[allow(clippy::cast_possible_truncation)]
     fn size(&self) -> Size {
         Size::new(self.0.info().width as u32, self.0.info().height as u32)
     }
